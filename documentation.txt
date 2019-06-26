@@ -1,0 +1,896 @@
+core Package
+core
+
+Top-level Python package containing CORE components.
+
+See http://www.nrl.navy.mil/itd/ncs/products/core and http://code.google.com/p/coreemu/ for more information on CORE.
+
+Pieces can be imported individually, for example
+
+import core.netns.vnode
+or everything listed in __all__ can be imported using
+
+from core import *
+broker Module
+broker.py: definition of CoreBroker class that is part of the pycore session object. Handles distributing parts of the emulation out to other emulation servers. The broker is consulted during the CoreRequestHandler.handlemsg() loop to determine if messages should be handled locally or forwarded on to another emulation server.
+
+class core.broker.CoreBroker(session, verbose=False)
+Bases: core.conf.ConfigurableManager
+
+Member of pycore session class for handling global emulation server data.
+
+addlinkendpoints(msg, serverset1, serverset2)
+For a link message that is not handled locally, inform the remote servers of the IP addresses used as tunnel endpoints by adding opaque data to the link message.
+
+addnet(nodenum)
+Add a node number to the list of link-layer nodes.
+
+addnettunnel(n)
+addnettunnels()
+Add GreTaps between network devices on different machines. The GreTapBridge is not used since that would add an extra bridge.
+
+addnodemap(server, nodenum)
+Record a node number to emulation server mapping.
+
+addphys(nodenum)
+Add a node number to the list of physical nodes.
+
+addserver(name, host, port)
+Add a new server, and try to connect to it. If we’re already connected to this (host, port), then leave it alone. When host,port is None, do not try to connect.
+
+addtunnel(remoteip, n1num, n2num, localnum)
+Add a new GreTapBridge between nodes on two different machines.
+
+configure_reset(msg)
+Ignore reset messages, because node delete responses may still arrive and require the use of nodecounts.
+
+configure_values(msg, values)
+Receive configuration message with a list of server:host:port combinations that we’ll need to connect with.
+
+delnodemap(sock, nodenum)
+Remove a node number to emulation server mapping. Return the number of nodes left on this server.
+
+delserver(name)
+Remove a server and hang up any connection.
+
+deltunnel(n1num, n2num)
+Cleanup of the GreTapBridge.
+
+static fixupremotetty(msghdr, msgdata, host)
+When an interactive TTY request comes from the GUI, snoop the reply and add an SSH command to the appropriate remote server.
+
+forwardmsg(msg, serverlist, handle_locally)
+Forward API message to all servers in serverlist; if an empty host/port is encountered, set the handle_locally flag. Returns the value of the handle_locally flag, which may be unchanged.
+
+getbootcount()
+Return the number of booted nodes.
+
+getlinkendpoint(msg, first_is_local)
+A link message between two different servers has been received, and we need to determine the tunnel endpoint. First look for opaque data in the link message, otherwise use the IP of the message sender (the master server).
+
+getserver(name)
+Return the (host, port, sock) tuple, or raise a KeyError exception.
+
+getserverbysock(sockfd)
+Return a (host, port, sock, name) tuple based on socket file descriptor, or raise a KeyError exception.
+
+getserverlist()
+Return the list of server names (keys from self.servers).
+
+getserversbynode(nodenum)
+Retrieve a list of emulation servers given a node number.
+
+gettunnel(n1num, n2num)
+Return the GreTap between two nodes if it exists.
+
+handlelinkmsg(msg)
+Determine and return the servers to which this link message should be forwarded. Also build tunnels between different servers or add opaque data to the link message before forwarding.
+
+handlemsg(msg)
+Handle an API message. Determine whether this needs to be handled by the local server or forwarded on to another one. Returns True when message does not need to be handled locally, and performs forwarding if required. Returning False indicates this message should be handled locally.
+
+handlenodemsg(msg)
+Determine and return the servers to which this node message should be forwarded. Also keep track of link-layer nodes and the mapping of nodes to servers.
+
+handlerawmsg(msg)
+Helper to invoke handlemsg() using raw (packed) message bytes.
+
+incrbootcount()
+Count a node that has booted.
+
+recv(sock, host)
+Receive data on an emulation server socket and broadcast it to all connected session handlers. Returns the length of data recevied and forwarded. Return value of zero indicates the socket has closed and should be removed from the self.servers dict.
+
+recvloop()
+Thread target that receives messages from server sockets.
+
+reset()
+Reset to initial state.
+
+setupserver(server)
+Send the appropriate API messages for configuring the specified emulation server.
+
+shutdown()
+Close all active sockets; called when the session enters the data collect state
+
+startrecvloop()
+Spawn the recvloop() thread if it hasn’t been already started.
+
+startup()
+Build tunnels between network-layer nodes now that all node and link information has been received; called when session enters the instantation state.
+
+tunnelkey(n1num, n2num)
+Compute a 32-bit key used to uniquely identify a GRE tunnel. The hash(n1num), hash(n2num) values are used, so node numbers may be None or string values (used for e.g. “ctrlnet”).
+
+writenodeserver(nodestr, server)
+Creates a /tmp/pycore.nnnnn/nX.conf/server file having the node and server info. This may be used by scripts for accessing nodes on other machines, much like local nodes may be accessed via the VnodeClient class.
+
+writeservers()
+Write the server list to a text file in the session directory upon startup: /tmp/pycore.nnnnn/servers
+
+conf Module
+conf.py: common support for configurable objects
+
+class core.conf.Configurable(session=None, objid=None)
+Bases: object
+
+A generic class for managing configuration parameters. Parameters are sent via Configuration Messages, which allow the GUI to build dynamic dialogs depending on what is being configured.
+
+static booltooffon(value)
+Convenience helper turns bool into on (True) or off (False) string.
+
+classmethod configure(mgr, msg)
+Handle configuration messages for this object.
+
+classmethod getdefaultvalues()
+getkeyvaluelist()
+Helper to return a list of (key, value) tuples. Keys come from self._confmatrix and values are instance attributes.
+
+classmethod getnames()
+static haskeyvalues(values)
+Helper to check for list of key=value pairs versus a plain old list of values. Returns True if all elements are “key=value”.
+
+static offontobool(value)
+register()
+reset()
+classmethod toconfmsg(flags, nodenum, typeflags, values)
+Convert this class to a Config API message. Some TLVs are defined by the class, but node number, conf type flags, and values must be passed in.
+
+classmethod valueof(name, values)
+Helper to return a value by the name defined in confmatrix. Checks if it is boolean
+
+class core.conf.ConfigurableManager(session=None)
+Bases: object
+
+A generic class for managing Configurables. This class can register with a session to receive Config Messages for setting some parameters for itself or for the Configurables that it manages.
+
+clearconfig(nodenum)
+remove configuration values for the specified node; when nodenum is None, remove all configuration values
+
+configure(session, msg)
+Handle configure messages. The configuration message sent to a ConfigurableManager usually is used to: 1. Request a list of Configurables (request flag) 2. Reset manager and clear configs (reset flag) 3. Send values that configure the manager or one of its
+
+Configurables
+Returns any reply messages.
+
+configure_request(msg)
+Request configuration data.
+
+configure_reset(msg)
+By default, resets this manager to clear configs.
+
+configure_values(msg, values)
+Values have been sent to this manager.
+
+configure_values_keyvalues(msg, values, target, keys)
+Helper that can be used for configure_values for parsing in ‘key=value’ strings from a values field. The key name must be in the keys list, and target.key=value is set.
+
+getallconfigs(use_clsmap=True)
+Return (nodenum, conftype, values) tuples for all stored configs. Used when reconnecting to a session.
+
+getconfig(nodenum, conftype, defaultvalues)
+get configuration values for a node; if the values don’t exist in our dictionary then return the default values supplied
+
+getmodels(n)
+Return a list of model classes and values for a net if one has been configured. This is invoked when exporting a session to XML. This assumes self.configs contains an iterable of (model-names, values) and a self._modelclsmapdict exists.
+
+info(msg)
+reset()
+setconfig(nodenum, conftype, values)
+add configuration values for a node to a dictionary; values are usually received from a Configuration Message, and may refer to a node for which no object exists yet
+
+setconfig_keyvalues(nodenum, conftype, keyvalues)
+keyvalues list of tuples
+
+warn(msg)
+constants Module
+coreobj Module
+coreobj.py: defines the basic objects for emulation: the PyCoreObj base class, along with PyCoreNode, PyCoreNet, and PyCoreNetIf
+
+class core.coreobj.Position(x=None, y=None, z=None)
+Bases: object
+
+Helper class for Cartesian coordinate position
+
+get()
+Fetch the (x,y,z) position tuple.
+
+set(x=None, y=None, z=None)
+Returns True if the position has actually changed.
+
+class core.coreobj.PyCoreNet(session, objid, name, verbose=False, start=True)
+Bases: core.coreobj.PyCoreObj
+
+Base class for networks
+
+attach(netif)
+detach(netif)
+linktype = 1
+netifparamstolink(netif)
+Helper for tolinkmsgs() to build TLVs having link parameters from interface parameters.
+
+tolinkmsgs(flags)
+Build CORE API Link Messages for this network. Each link message describes a link between this network and a node.
+
+class core.coreobj.PyCoreNetIf(node, name, mtu)
+Bases: object
+
+Base class for interfaces.
+
+addaddr(addr)
+attachnet(net)
+deladdr(addr)
+detachnet()
+getparam(key)
+Retrieve a parameter from the _params dict, or None if the parameter does not exist.
+
+getparams()
+Return (key, value) pairs from the _params dict.
+
+sethwaddr(addr)
+setparam(key, value)
+Set a parameter in the _params dict. Returns True if the parameter has changed.
+
+setposition(x, y, z)
+Dispatch to any position hook (self.poshook) handler.
+
+shutdown()
+startup()
+swapparams(name)
+Swap out the _params dict for name. If name does not exist, intialize it. This is for supporting separate upstream/downstream parameters when two layer-2 nodes are linked together.
+
+class core.coreobj.PyCoreNode(session, objid=None, name=None, verbose=False, start=True)
+Bases: core.coreobj.PyCoreObj
+
+Base class for nodes
+
+addnetif(netif, ifindex)
+addservice(service)
+attachnet(ifindex, net)
+commonnets(obj, want_ctrl=False)
+Given another node or net object, return common networks between this node and that object. A list of tuples is returned, with each tuple consisting of (network, interface1, interface2).
+
+delnetif(ifindex)
+detachnet(ifindex)
+makenodedir()
+netif(ifindex, net=None)
+nodeid()
+rmnodedir()
+setposition(x=None, y=None, z=None)
+class core.coreobj.PyCoreObj(session, objid=None, name=None, verbose=False, start=True)
+Bases: object
+
+Base class for pycore objects (nodes and nets)
+
+apitype = None
+exception(level, source, text)
+Generate an Exception Message for this session, providing this object number.
+
+getifindex(netif)
+getposition()
+Return an (x,y,z) tuple representing this object’s position.
+
+ifname(ifindex)
+info(msg)
+Utility method for printing informational messages when verbose is turned on.
+
+netifs(sort=False)
+Iterate over attached network interfaces.
+
+newifindex()
+numnetif()
+Return the attached interface count.
+
+setposition(x=None, y=None, z=None)
+Set the (x,y,z) position of the object.
+
+shutdown()
+Each object implements its own shutdown method.
+
+startup()
+Each object implements its own startup method.
+
+tolinkmsgs(flags)
+Build CORE API Link Messages for this object. There is no default method for PyCoreObjs as PyCoreNodes do not implement this but PyCoreNets do.
+
+tonodemsg(flags)
+Build a CORE API Node Message for this object. Both nodes and networks can be represented by a Node Message.
+
+warn(msg)
+Utility method for printing warning/error messages
+
+location Module
+location.py: definition of CoreLocation class that is a member of the Session object. Provides conversions between Cartesian and geographic coordinate systems. Depends on utm contributed module, from https://pypi.python.org/pypi/utm (version 0.3.0).
+
+class core.location.CoreLocation(session)
+Bases: core.conf.ConfigurableManager
+
+Member of session class for handling global location data. This keeps track of a latitude/longitude/altitude reference point and scale in order to convert between X,Y and geo coordinates.
+
+TODO: this could be updated to use more generic
+Configurable/ConfigurableManager code like other Session objects
+configure_values(msg, values)
+Receive configuration message for setting the reference point and scale.
+
+geteastingshift(zonen, zonel)
+If the lat, lon coordinates being converted are located in a different UTM zone than the canvas reference point, the UTM meters may need to be shifted. This picks a reference point in the same longitudinal band (UTM zone number) as the provided zone, to calculate the shift in meters for the x coordinate.
+
+getgeo(x, y, z)
+Given (x, y, z) Cartesian coordinates, convert them to latitude, longitude, and altitude based on the configured reference point and scale.
+
+getnorthingshift(zonen, zonel)
+If the lat, lon coordinates being converted are located in a different UTM zone than the canvas reference point, the UTM meters may need to be shifted. This picks a reference point in the same latitude band (UTM zone letter) as the provided zone, to calculate the shift in meters for the y coordinate.
+
+getutmzoneshift(e, n)
+Given UTM easting and northing values, check if they fall outside the reference point’s zone boundary. Return the UTM coordinates in a different zone and the new zone if they do. Zone lettering is only changed when the reference point is in the opposite hemisphere.
+
+getxyz(lat, lon, alt)
+Given latitude, longitude, and altitude location data, convert them to (x, y, z) Cartesian coordinates based on the configured reference point and scale. Lat/lon is converted to UTM meter coordinates, UTM zones are accounted for, and the scale turns meters to pixels.
+
+m2px(val)
+Convert the specified value in meters to pixels using the configured scale. The scale is given as s, where 100 pixels = s meters.
+
+px2m(val)
+Convert the specified value in pixels to meters using the configured scale. The scale is given as s, where 100 pixels = s meters.
+
+reset()
+Reset to initial state.
+
+setrefgeo(lat, lon, alt)
+Record the geographical reference point decimal (lat, lon, alt) and convert and store its UTM equivalent for later use.
+
+mobility Module
+mobility.py: mobility helpers for moving nodes and calculating wireless range.
+
+class core.mobility.BasicRangeModel(session, objid, verbose=False, values=None)
+Bases: core.mobility.WirelessModel
+
+Basic Range wireless model, calculates range between nodes and links and unlinks nodes based on this distance. This was formerly done from the GUI.
+
+static calcdistance(p1, p2)
+Calculate the distance between two three-dimensional points.
+
+calclink(netif, netif2)
+Helper used by set_position() and update() to calculate distance between two interfaces and perform linking/unlinking. Sends link/unlink messages and updates the WlanNode’s linked dict.
+
+classmethod configure_mob(session, msg)
+Handle configuration messages for setting up a model. Pass the MobilityManager object as the manager object.
+
+get_position(netif)
+linkmsg(netif, netif2, flags)
+Create a wireless link/unlink API message.
+
+sendlinkmsg(netif, netif2, unlink=False)
+Send a wireless link/unlink API message to the GUI.
+
+set_position(netif, x=None, y=None, z=None)
+A node has moved; given an interface, a new (x,y,z) position has been set; calculate the new distance between other nodes and link or unlink node pairs based on the configured range.
+
+setlinkparams()
+Apply link parameters to all interfaces. This is invoked from WlanNode.setmodel() after the position callback has been set.
+
+tolinkmsgs(flags)
+Return a list of wireless link messages for when the GUI reconnects.
+
+update(moved, moved_netifs)
+Node positions have changed without recalc. Update positions from node.position, then re-calculate links for those that have moved. Assumes bidirectional links, with one calculation per node pair, where one of the nodes has moved.
+
+updateconfig(values)
+Configuration has changed during runtime. MobilityManager.setconfig() -> WlanNode.updatemodel() -> WirelessModel.updateconfig()
+
+valuestolinkparams(values)
+class core.mobility.MobilityManager(session)
+Bases: core.conf.ConfigurableManager
+
+Member of session class for handling configuration data for mobility and range models.
+
+addphys(netnum, node)
+Keep track of PhysicalNodes and which network they belong to.
+
+handleevent(msg)
+Handle an Event Message used to start, stop, or pause mobility scripts for a given WlanNode.
+
+installphysnodes(net)
+After installing a mobility model on a net, include any physical nodes that we have recorded. Use the GreTap tunnel to the physical node as the node’s interface.
+
+physnodehandlelink(msg)
+Broker handler. Snoop Link add messages to get node numbers of PhyiscalNodes and their nets. Physical nodes exist only on other servers, but a shadow object is created here for tracking node position.
+
+physnodeupdateposition(msg)
+Snoop node messages belonging to physical nodes. The dummy object in self.phys[] records the node position.
+
+register()
+Register models as configurable object(s) with the Session object.
+
+reset()
+Reset all configs.
+
+sendevent(model)
+Send an event message on behalf of a mobility model. This communicates the current and end (max) times to the GUI.
+
+setconfig(nodenum, conftype, values)
+Normal setconfig() with check for run-time updates for WLANs.
+
+startup(nodenums=None)
+Session is transitioning from instantiation to runtime state. Instantiate any mobility models that have been configured for a WLAN.
+
+updatewlans(moved, moved_netifs)
+A mobility script has caused nodes in the ‘moved’ list to move. Update every WlanNode. This saves range calculations if the model were to recalculate for each individual node movement.
+
+class core.mobility.Ns2ScriptedMobility(session, objid, verbose=False, values=None)
+Bases: core.mobility.WayPointMobility
+
+Handles the ns-2 script format, generated by scengen/setdest or BonnMotion.
+
+classmethod configure_mob(session, msg)
+Handle configuration messages for setting up a model. Pass the MobilityManager object as the manager object.
+
+findfile(fn)
+Locate a script file. If the specified file doesn’t exist, look in the same directory as the scenario file (session.filename), or in the default configs directory (~/.core/configs). This allows for sample files without absolute pathnames.
+
+map(nodenum)
+Map one node number (from a script file) to another.
+
+parsemap(mapstr)
+Parse a node mapping string, given as a configuration parameter.
+
+pause()
+readscriptfile()
+Read in mobility script from a file. This adds waypoints to a priority queue, sorted by waypoint time. Initial waypoints are stored in a separate dict.
+
+run()
+Start is pressed or autostart is triggered.
+
+start()
+Handle the case when un-paused.
+
+startup()
+Start running the script if autostart is enabled. Move node to initial positions when any autostart time is specified. Ignore the script if autostart is an empty string (can still be started via GUI controls).
+
+statescript(typestr)
+stop(move_initial=True)
+class core.mobility.WayPointMobility(session, objid, verbose=False, values=None)
+Bases: core.mobility.WirelessModel
+
+Abstract class for mobility models that set node waypoints.
+
+STATE_PAUSED = 2
+STATE_RUNNING = 1
+STATE_STOPPED = 0
+class WayPoint(time, nodenum, coords, speed)
+Bases: object
+
+WayPointMobility.addinitial(nodenum, x, y, z)
+Record initial position in a dict.
+
+WayPointMobility.addwaypoint(time, nodenum, x, y, z, speed)
+Waypoints are pushed to a heapq, sorted by time.
+
+WayPointMobility.copywaypoints()
+Store backup copy of waypoints for looping and stopping.
+
+WayPointMobility.loopwaypoints()
+Restore backup copy of waypoints when looping.
+
+WayPointMobility.movenode(node, dt)
+Calculate next node location and update its coordinates. Returns True if the node’s position has changed.
+
+WayPointMobility.movenodesinitial()
+Move nodes to their initial positions. Then calculate the ranges.
+
+WayPointMobility.pause()
+Pause the script; pause time is stored to self.lasttime.
+
+WayPointMobility.run()
+WayPointMobility.runround()
+Advance script time and move nodes.
+
+WayPointMobility.setendtime()
+Set self.endtime to the time of the last waypoint in the queue of waypoints. This is just an estimate. The endtime will later be adjusted, after one round of the script has run, to be the time that the last moving node has reached its final waypoint.
+
+WayPointMobility.setnodeposition(node, x, y, z)
+Helper to move a node, notify any GUI (connected session handlers), without invoking the interface poshook callback that may perform range calculation.
+
+WayPointMobility.start()
+Run the script from the beginning or unpause from where it was before.
+
+WayPointMobility.stop(move_initial=True)
+Stop the script and move nodes to initial positions.
+
+WayPointMobility.updatepoints(now)
+Move items from self.queue to self.points when their time has come.
+
+class core.mobility.WirelessModel(session, objid, verbose=False, values=None)
+Bases: core.conf.Configurable
+
+Base class used by EMANE models and the basic range model. Used for managing arbitrary configuration parameters.
+
+tolinkmsgs(flags)
+May be used if the model can populate the GUI with wireless (green) link lines.
+
+update(moved, moved_netifs)
+updateconfig(values)
+For run-time updates of model config. Returns True when self._positioncallback() and self.setlinkparams() should be invoked.
+
+pycore Module
+This is a convenience module that imports a set of platform-dependent defaults.
+
+sdt Module
+sdt.py: Scripted Display Tool (SDT3D) helper
+
+class core.sdt.Sdt(session)
+Bases: object
+
+Helper class for exporting session objects to NRL’s SDT3D. The connect() method initializes the display, and can be invoked when a node position or link has changed.
+
+class Bunch(**kwds)
+Helper class for recording a collection of attributes.
+
+Sdt.DEFAULT_ALT = 2500
+Sdt.DEFAULT_SDT_URL = 'tcp://127.0.0.1:50000/'
+Sdt.DEFAULT_SPRITES = [('router', 'router.gif'), ('host', 'host.gif'), ('PC', 'pc.gif'), ('mdr', 'mdr.gif'), ('prouter', 'router_green.gif'), ('xen', 'xen.gif'), ('hub', 'hub.gif'), ('lanswitch', 'lanswitch.gif'), ('wlan', 'wlan.gif'), ('rj45', 'rj45.gif'), ('tunnel', 'tunnel.gif')]
+Sdt.cmd(cmdstr)
+Send an SDT command over a UDP socket. socket.sendall() is used as opposed to socket.sendto() because an exception is raised when there is no socket listener.
+
+Sdt.connect(flags=0)
+Connect to the SDT address/port if enabled.
+
+Sdt.disconnect()
+Sdt.handledistributed(msg)
+Broker handler for processing CORE API messages as they are received. This is used to snoop the Node messages and update node positions.
+
+Sdt.handlelinkmsg(msg)
+Process a Link Message to add/remove links on the SDT display. Links are recorded in the remotes[nodenum1].links set for updating the SDT display at a later time.
+
+Sdt.handlenodemsg(msg)
+Process a Node Message to add/delete or move a node on the SDT display. Node properties are found in session._objs or self.remotes for remote nodes (or those not yet instantiated).
+
+Sdt.initialize()
+Load icon sprites, and fly to the reference point location on the virtual globe.
+
+Sdt.is_enabled()
+Check for ‘enablesdt’ session option. Return False by default if the option is missing.
+
+Sdt.sendobjs()
+Session has already started, and the SDT3D GUI later connects. Send all node and link objects for display. Otherwise, nodes and links will only be drawn when they have been updated (e.g. moved).
+
+Sdt.seturl()
+Read ‘sdturl’ from session options, or use the default value. Set self.url, self.address, self.protocol
+
+Sdt.shutdown()
+Invoked from Session.shutdown() and Session.checkshutdown().
+
+Sdt.updatelink(node1num, node2num, flags, wireless=False)
+Link is updated from a Link Message or by a wireless model.
+
+Sdt.updatenode(nodenum, flags, x, y, z, name=None, type=None, icon=None)
+Node is updated from a Node Message or mobility script.
+
+Sdt.updatenodegeo(nodenum, lat, long, alt)
+Node is updated upon receiving an EMANE Location Event. TODO: received Node Message with lat/long/alt.
+
+Sdt.wlancheck(nodenum)
+Helper returns True if a node number corresponds to a WlanNode or EmaneNode.
+
+service Module
+service.py: definition of CoreService class that is subclassed to define startup services and routing for nodes. A service is typically a daemon program launched when a node starts that provides some sort of service. The CoreServices class handles configuration messages for sending a list of available services to the GUI and for configuring individual services.
+
+class core.service.CoreService
+Bases: object
+
+Parent class used for defining services.
+
+fromvaluelist(values)
+Convert list of values into properties for this instantiated (customized) service.
+
+classmethod generateconfig(node, filename, services)
+Generate configuration file given a node object. The filename is provided to allow for multiple config files. The other services are provided to allow interdependencies (e.g. zebra and OSPF). Return the configuration string to be written to a file or sent to the GUI for customization.
+
+classmethod getconfigfilenames(nodenum, services)
+Return the tuple of configuration file filenames. This default method returns the cls._configs tuple, but this method may be overriden to provide node-specific filenames that may be based on other services.
+
+classmethod getstartup(node, services)
+Return the tuple of startup commands. This default method returns the cls._startup tuple, but this method may be overriden to provide node-specific commands that may be based on other services.
+
+classmethod getvalidate(node, services)
+Return the tuple of validate commands. This default method returns the cls._validate tuple, but this method may be overriden to provide node-specific commands that may be based on other services.
+
+keys = ['dirs', 'files', 'startidx', 'cmdup', 'cmddown', 'cmdval', 'meta', 'starttime']
+setvalue(key, value)
+classmethod tovaluelist(node, services)
+Convert service properties into a string list of key=value pairs, separated by “|”.
+
+class core.service.CoreServices(session)
+Bases: core.conf.ConfigurableManager
+
+Class for interacting with a list of available startup services for nodes. Mostly used to convert a CoreService into a Config API message. This class lives in the Session object and remembers the default services configured for each node type, and any custom service configuration. A CoreService is not a Configurable.
+
+addservicestonode(node, nodetype, services_str, verbose)
+Populate the node.service list using (1) the list of services requested from the services TLV, (2) using any custom service configuration, or (3) using the default services for this node type.
+
+bootnodecustomservice(node, s, services)
+Start a custom service on a node. Create private dirs, use supplied config files, and execute supplied startup commands.
+
+bootnodeservice(node, s, services)
+Start a service on a node. Create private dirs, generate config files, and execute startup commands.
+
+bootnodeservices(node)
+Start all services on a node.
+
+buildgroups(servicelist)
+Build a string of groups for use in a configuration message given a list of services. The group list string has the format “title1:1-5|title2:6-9|10-12”, where title is an optional group title and i-j is a numeric range of value indices; groups are separated by commas.
+
+configure_request(msg)
+Receive configuration message for configuring services. With a request flag set, a list of services has been requested. When the opaque field is present, a specific service is being configured or requested.
+
+configure_values(msg, values)
+Receive configuration message for configuring services. With a request flag set, a list of services has been requested. When the opaque field is present, a specific service is being configured or requested.
+
+copyservicefile(node, filename, cfg)
+Given a configured service filename and config, determine if the config references an existing file that should be copied. Returns True for local files, False for generated.
+
+get()
+Get the list of available services.
+
+getallconfigs()
+Return (nodenum, service) tuples for all stored configs. Used when reconnecting to a session or opening XML.
+
+getallfiles(service)
+Return all customized files stored with a service. Used when reconnecting to a session or opening XML.
+
+getcustomservice(objid, service)
+Get any custom service configured for the given node that matches the specified service name. If no custom service is found, return the specified service.
+
+getdefaultservices(type)
+Get the list of default services that should be enabled for a node for the given node type.
+
+getservicebyname(name)
+Get a service class from the global servicelist given its name. Returns None when the name is not found.
+
+getservicefile(services, node, filename)
+Send a File Message when the GUI has requested a service file. The file data is either auto-generated or comes from an existing config.
+
+getservicefiledata(service, filename)
+Get the customized file data associated with a service. Return None for invalid filenames or missing file data.
+
+handleevent(msg)
+Handle an Event Message used to start, stop, restart, or validate a service on a given node.
+
+importcustom(path)
+Import services from a myservices directory.
+
+reset()
+Called when config message with reset flag is received
+
+servicesfromopaque(opaque, objid)
+Build a list of services from an opaque data string.
+
+setcustomservice(objid, service, values)
+Store service customizations in an instantiated service object using a list of values that came from a config message.
+
+setservicefile(nodenum, type, filename, srcname, data)
+Receive a File Message from the GUI and store the customized file in the service config. The filename must match one from the list of config files in the service.
+
+stopnodeservice(node, s)
+Stop a service on a node.
+
+stopnodeservices(node)
+Stop all services on a node.
+
+validatenodeservice(node, s, services)
+Run the validation command(s) for a service.
+
+validatenodeservices(node)
+Run validation commands for all services on a node.
+
+core.service.addservice(service)
+session Module
+session.py: defines the Session class used by the core-daemon daemon program that manages a CORE session.
+
+class core.session.Session(sessionid=None, cfg={}, server=None, persistent=False, mkdir=True)
+Bases: object
+
+add_state_hook(state, hook)
+addconfobj(objname, type, callback)
+Objects can register configuration objects that are included in the Register Message and may be configured via the Configure Message. The callback is invoked when receiving a Configure Message.
+
+addevent(etime, node=None, name=None, data=None)
+Add an event to the event queue, with a start time relative to the start of the runtime state.
+
+addobj(cls, *clsargs, **clskwds)
+Add an emulation object.
+
+addremovectrlif(node, netidx=0, remove=False, conf_reqd=True)
+Add a control interface to a node when a ‘controlnet’ prefix is listed in the config file or session options. Uses addremovectrlnet() to build or remove the control bridge. If conf_reqd is False, the control network may be built even when the user has not configured one (e.g. for EMANE.)
+
+addremovectrlnet(netidx, remove=False, conf_reqd=True)
+Create a control network bridge as necessary. When the remove flag is True, remove the bridge that connects control interfaces. The conf_reqd flag, when False, causes a control network bridge to be added even if one has not been configured.
+
+classmethod addsession(session)
+classmethod atexit()
+bootnodes(handler)
+Invoke the boot() procedure for all nodes and send back node messages to the GUI for node messages that had the status request flag.
+
+broadcast(src, msg)
+Send Node and Link CORE API messages to all handlers connected to this session.
+
+broadcastraw(src, data)
+Broadcast raw data to all handlers except src.
+
+checkruntime()
+Check if we have entered the runtime state, that all nodes have been started and the emulation is running. Start the event loop once we have entered runtime (time=0).
+
+checkshutdown()
+Check if we have entered the shutdown state, when no running nodes and links remain.
+
+confobj(objname, session, msg)
+Invoke the callback for an object upon receipt of a Configure Message for that object. A no-op if the object doesn’t exist.
+
+confobjs_to_tlvs()
+Turn the configuration objects into a list of Register Message TLVs.
+
+connect(handler)
+Set the request handler for this session, making it connected.
+
+datacollect()
+Tear down a running session. Stop the event loop and any running nodes, and perform clean-up.
+
+del_state_hook(state, hook)
+delhooks()
+Clear the hook scripts dict.
+
+delobj(objid)
+Remove an emulation object.
+
+delobjs()
+Clear the _objs dictionary, and call each obj.shutdown() routine.
+
+classmethod delsession(session)
+disconnect(handler)
+Disconnect a request handler from this session. Shutdown this session if there is no running emulation.
+
+dumpsession()
+Debug print this session.
+
+exception(level, source, objid, text)
+Generate an Exception Message
+
+getcfgitem(cfgname)
+Return an entry from the configuration dictionary that comes from command-line arguments and/or the core.conf config file.
+
+getcfgitembool(cfgname, defaultifnone=None)
+Return a boolean entry from the configuration dictionary, may return None if undefined.
+
+getcfgitemint(cfgname, defaultifnone=None)
+Return an integer entry from the configuration dictionary, may return None if undefined.
+
+getctrlnetidx(dev)
+getctrlnetobj(netidx)
+getctrlnetprefixes()
+getctrlnetserverintf()
+getenviron(state=True)
+Get an environment suitable for a subprocess.Popen call. This is the current process environment with some session-specific variables.
+
+gethandler()
+Get one of the connected handlers, preferrably the master.
+
+getnodecount()
+Returns the number of CoreNodes and CoreNets, except for those that are not considered in the GUI’s node count.
+
+getobjid()
+Return a unique, random object id.
+
+getstate()
+Retrieve the current state of the session.
+
+info(msg)
+Utility method for writing output to stdout.
+
+instantiate(handler=None)
+We have entered the instantiation state, invoke startup methods of various managers and boot the nodes. Validate nodes and check for transition to the runtime state.
+
+isconnected()
+Returns true if this session has a request handler.
+
+obj(objid)
+Get an emulation object.
+
+objbyname(name)
+Get an emulation object using its name attribute.
+
+objs()
+Return iterator over the emulation object dictionary.
+
+run_state_hooks(state)
+runevent(node=None, name=None, data=None)
+Run a scheduled event, executing commands in the data string.
+
+runhook(state, hooks=None)
+Run hook scripts upon changing states. If hooks is not specified, run all hooks in the given state.
+
+runtime()
+Return the current time we have been in the runtime state, or zero if not in runtime.
+
+runtime_state_hook(state)
+sendnodeemuid(handler, nodenum)
+Send back node messages to the GUI for node messages that had the status request flag.
+
+sendobjs()
+Return API messages that describe the current session.
+
+sethook(type, filename, srcname, data)
+Store a hook from a received File Message.
+
+setmaster(handler)
+Look for the specified handler and set our master flag appropriately. Returns True if we are connected to the given handler.
+
+setstate(state, info=False, sendevent=False, returnevent=False)
+Set the session state. When info is true, log the state change event using the session handler’s info method. When sendevent is true, generate a CORE API Event Message and send to the connected entity.
+
+setthumbnail(thumbfile)
+Set the thumbnail filename. Move files from /tmp to session dir.
+
+setuser(user)
+Set the username for this session. Update the permissions of the session dir to allow the user write access.
+
+shortsessionid()
+Return a shorter version of the session ID, appropriate for interface names, where length may be limited.
+
+shutdown()
+Shut down all emulation objects and remove the session directory.
+
+updatectrlifhosts(netidx=0, remove=False)
+Add the IP addresses of control interfaces to the /etc/hosts file.
+
+validatenodes()
+warn(msg)
+Utility method for writing output to stderr.
+
+writeobjs()
+Write objects to a ‘nodes’ file in the session dir. The ‘nodes’ file lists: number, name, api-type, class-type
+
+writestate(state)
+Write the current state to a state file in the session dir.
+
+class core.session.SessionConfig(session)
+Bases: core.conf.ConfigurableManager, core.conf.Configurable
+
+configure_request(msg, typeflags=0)
+configure_values(msg, values)
+handledistributed(msg)
+Handle the session options config message as it has reached the broker. Options requiring modification for distributed operation should be handled here.
+
+handledistributedcontrolnet(msg, values, idx)
+Modify Config Message if multiple control network prefixes are defined. Map server names to prefixes and repack the message before it is forwarded to slave servers.
+
+reset()
+class core.session.SessionMetaData(session=None)
+Bases: core.conf.ConfigurableManager
+
+Metadata is simply stored in a configs[] dict. Key=value pairs are passed in from configure messages destined to the “metadata” object. The data is not otherwise interpreted or processed.
+
+additem(key, value)
+configure_request(msg, typeflags=0)
+configure_values(msg, values)
+items()
+toconfmsg(flags, nodenum, typeflags, values_str)
