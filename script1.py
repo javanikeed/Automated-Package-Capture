@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""CORE_script1.py: Inserts custom router configuration command to any .imn file in order to automate package capture then later safe to filesystem on its own."""
+"""script.py: Inserts custom router configuration command to any .imn file in order to automate package capture then later safe to filesystem on its own."""
 
 __author__  = "Jazmin I. Paz"
 __version__ = "1.0.2"
