@@ -14,20 +14,24 @@ import sys
 
 file = open(sys.argv[1], "r")
 modif = open("ARL_demo.imn", "w")
-node_num=1
-_command = "    custom-config{\n\tcustom-config-id service: UserDefined\n\tcustom-command UserDefined\n\tconfig{\n\tcmdup=('tcpdump -i eth0 -n -w /tmp/n"
-command_ = ".pcap',)\n\t}\n }\n"
+node_num=0
+_command = "    custom-config {\n\tcustom-config-id service:UserDefined\n\n\tcustom-command UserDefined\n\tconfig {\n\tcmdup=('tcpdump -i eth0 -n -w /tmp/n"
+command_ = ".pcap', )\n\t}\n    }\n}\n"
 #prevLine = " "
 prevLine = False;
-
+routerNode = False
 
 for line in file:
+    if "node" in line:
+        node_num+=1 
+    if "router" in line:
+        routerNode = True
     if "interface-peer" in line:
         prevLine = True
-    if line.startswith("}") and prevLine:
+    if line.startswith("}") and prevLine and routerNode:
         modif.write(_command+str(node_num)+command_)
-        node_num+=1
         prevLine = False
+        routerNode = False
     else:
         modif.write(line)
 file.close() 
