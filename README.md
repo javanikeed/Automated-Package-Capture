@@ -1,0 +1,4 @@
+# Automated-Package-Capture
+A python script to be used in the Common Open Research Emulator (CORE) in order to begin automatic package capturing using tcpdump, and later writing data file to filesystem.
+ <br />  <br />
+![alt text](https://github.com/javanikeed/Automated-Package-Capture/blob/master/scenarios/scenario4.png) <br />  <br />
