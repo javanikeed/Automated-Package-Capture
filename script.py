@@ -62,7 +62,7 @@ for line in file:
         routerNode = False
     if line.startswith("}") and interfacePeer and routerNode:
         if (modelPC):
-            modif.write(_command+folderName+"/node_"+str(node_num)+command_+modelPCServices)
+            modif.write(_command+folderName+"/node_"+str(node_num)+command_+PCServices)
             modelPC = False
             modelRouter = False
         if (modelRouter):
