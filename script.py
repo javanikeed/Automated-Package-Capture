@@ -65,7 +65,7 @@ for line in file:
             modif.write(_command+folderName+"/node_"+str(node_num)+command_+modelPCServices)
             modelPC = False
             modelRouter = False
-        if (modelRouter)
+        if (modelRouter):
             modif.write(_command+folderName+"/node_"+str(node_num)+command_+routerServices)
             modelPC = False
             modelRouter = False
